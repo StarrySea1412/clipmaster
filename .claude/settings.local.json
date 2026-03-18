@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs wc:*)",
+      "Bash(grep -r \"eval\\\\|innerHTML\\\\|dangerouslySetInnerHTML\" /d/project/clipboard-manager/src --include=*.ts --include=*.tsx --include=*.js --include=*.jsx)",
+      "Bash(wc -l /d/project/clipboard-manager/src/main/*.ts /d/project/clipboard-manager/src/renderer/src/components/*.tsx)",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}

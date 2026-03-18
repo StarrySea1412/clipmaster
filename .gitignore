@@ -1,0 +1,29 @@
+node_modules
+dist
+out
+.DS_Store
+.eslintcache
+*.log*
+*.db
+
+# Debug / temp files
+debug*.txt
+stdout*.txt
+stderr*.txt
+data/
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Build artifacts
+*.tsbuildinfo
+
+# Figma design files
+.figma/
