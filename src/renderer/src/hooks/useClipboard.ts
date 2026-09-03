@@ -20,9 +20,9 @@ export function useClipboard(): UseClipboardReturn {
   const [items, setItems] = useState<ClipboardItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchValue, setSearchValue] = useState('')
+  const [debouncedSearchValue, setDebouncedSearchValue] = useState('')
   const [activeCategory, setActiveCategory] = useState<ContentCategory | null>(null)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
-  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const api = window.clipboardAPI
 
@@ -56,8 +56,16 @@ export function useClipboard(): UseClipboardReturn {
   )
 
   useEffect(() => {
-    fetchItems(searchValue, activeCategory)
-  }, [fetchItems, searchValue, activeCategory])
+    const timer = setTimeout(() => {
+      setDebouncedSearchValue(searchValue)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [searchValue])
+
+  useEffect(() => {
+    fetchItems(debouncedSearchValue, activeCategory)
+  }, [activeCategory, debouncedSearchValue, fetchItems])
 
   const activeCategoryRef = useRef(activeCategory)
   activeCategoryRef.current = activeCategory
@@ -94,23 +102,13 @@ export function useClipboard(): UseClipboardReturn {
 
   useEffect(() => {
     return () => {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current)
       if (toastTimer.current) clearTimeout(toastTimer.current)
     }
   }, [])
 
-  const handleSetSearchValue = useCallback(
-    (value: string) => {
-      setSearchValue(value)
-      if (debounceTimer.current) {
-        clearTimeout(debounceTimer.current)
-      }
-      debounceTimer.current = setTimeout(() => {
-        fetchItems(value, activeCategory)
-      }, 300)
-    },
-    [fetchItems, activeCategory]
-  )
+  const handleSetSearchValue = useCallback((value: string) => {
+    setSearchValue(value)
+  }, [])
 
   const copyToClipboard = useCallback(
     async (id: number) => {
@@ -166,7 +164,7 @@ export function useClipboard(): UseClipboardReturn {
     togglePin,
     deleteItem,
     clearHistory: clearHistoryFn,
-    refresh: () => fetchItems(searchValue, activeCategory),
+    refresh: () => fetchItems(debouncedSearchValue, activeCategory),
     toastMessage
   }
 }

@@ -376,7 +376,7 @@ const ClipboardItemCard = memo(function ClipboardItemCard({
     return () => {
       observer.disconnect()
     }
-  }, []) // 空依赖，只在挂载时创建 observer
+  }, [imageData, imageLoading, item.contentType, item.id])
 
   const handleSetShortcut = useCallback(
     async (shortcut: string | null): Promise<void> => {
@@ -594,6 +594,7 @@ function ClipboardList({
   // 分页加载状态
   const [displayCount, setDisplayCount] = useState(10)
   const ITEMS_PER_PAGE = 10
+  const visibleItems = items.slice(0, displayCount)
 
   const handleEdit = async (id: number, content: string): Promise<void> => {
     await window.clipboardAPI.updateItemContent(id, content)
@@ -648,6 +649,17 @@ function ClipboardList({
     setDisplayCount(Math.min(ITEMS_PER_PAGE, items.length))
   }, [items.length])
 
+  useEffect(() => {
+    if (visibleItems.length === 0 && focusedIndex !== -1) {
+      setFocusedIndex(-1)
+      return
+    }
+
+    if (focusedIndex >= visibleItems.length && visibleItems.length > 0) {
+      setFocusedIndex(visibleItems.length - 1)
+    }
+  }, [focusedIndex, visibleItems.length])
+
   const handleContextMenu = (e: React.MouseEvent, itemId: number): void => {
     setContextMenuState({ itemId, x: e.clientX, y: e.clientY })
   }
@@ -663,7 +675,7 @@ function ClipboardList({
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault()
-          setFocusedIndex((prev) => Math.min(prev + 1, items.length - 1))
+          setFocusedIndex((prev) => Math.min(prev + 1, visibleItems.length - 1))
           break
         case 'ArrowUp':
           e.preventDefault()
@@ -671,15 +683,15 @@ function ClipboardList({
           break
         case 'Enter':
           e.preventDefault()
-          if (focusedIndex >= 0 && items[focusedIndex]) {
-            onCopy(items[focusedIndex].id)
+          if (focusedIndex >= 0 && visibleItems[focusedIndex]) {
+            onCopy(visibleItems[focusedIndex].id)
           }
           break
         case 'Delete':
         case 'Backspace':
-          if (focusedIndex >= 0 && items[focusedIndex]) {
+          if (focusedIndex >= 0 && visibleItems[focusedIndex]) {
             e.preventDefault()
-            onDelete(items[focusedIndex].id)
+            onDelete(visibleItems[focusedIndex].id)
             setFocusedIndex((prev) => Math.max(prev - 1, 0))
           }
           break
@@ -688,7 +700,7 @@ function ClipboardList({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [items.length, onCopy, onDelete])
+  }, [focusedIndex, onCopy, onDelete, visibleItems])
 
   // 只渲染前 displayCount 个项目
   const displayItems = items.slice(0, displayCount)

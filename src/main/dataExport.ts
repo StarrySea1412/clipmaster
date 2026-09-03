@@ -1,7 +1,7 @@
 import { dialog } from 'electron'
-import { join } from 'path'
 import fs from 'fs'
-import { getDB, getDataDir } from './database'
+import { getDB } from './database'
+import { readStoredSettings, writeStoredSettings, type StoredSettings } from './storage'
 
 interface ClipboardItemRow {
   id: number
@@ -29,11 +29,7 @@ interface ExportData {
   exportedAt: number
   clipboardItems: ClipboardItemRow[]
   memos: MemoRow[]
-  settings: {
-    theme: string
-    autoLaunch: boolean
-    shortcut: string
-  }
+  settings: StoredSettings
 }
 
 function isValidClipboardItem(item: unknown): item is ClipboardItemRow {
@@ -67,7 +63,17 @@ function isValidSettings(settings: unknown): settings is ExportData['settings'] 
   return (
     (o.theme === undefined || ['dark', 'light'].includes(o.theme as string)) &&
     (o.autoLaunch === undefined || typeof o.autoLaunch === 'boolean') &&
-    (o.shortcut === undefined || typeof o.shortcut === 'string')
+    (o.historyLimit === undefined || typeof o.historyLimit === 'number') &&
+    (o.shortcut === undefined || typeof o.shortcut === 'string') &&
+    (o.temperatureUnit === undefined ||
+      o.temperatureUnit === 'celsius' ||
+      o.temperatureUnit === 'fahrenheit') &&
+    (o.weatherLocation === undefined ||
+      (typeof o.weatherLocation === 'object' &&
+        o.weatherLocation !== null &&
+        typeof (o.weatherLocation as Record<string, unknown>).lat === 'number' &&
+        typeof (o.weatherLocation as Record<string, unknown>).lon === 'number' &&
+        typeof (o.weatherLocation as Record<string, unknown>).name === 'string'))
   )
 }
 
@@ -88,23 +94,12 @@ export async function exportData(): Promise<string | null> {
     const clipboardItems = db.prepare('SELECT * FROM clipboard_items').all()
     const memos = db.prepare('SELECT * FROM memos').all()
 
-    const settingsPath = join(getDataDir(), 'settings.json')
-    let settings = { theme: 'dark', autoLaunch: false, shortcut: 'Alt+Shift+V' }
-    if (fs.existsSync(settingsPath)) {
-      try {
-        const settingsData = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'))
-        settings = { ...settings, ...settingsData }
-      } catch {
-        // Ignore invalid settings file
-      }
-    }
-
     const exportData: ExportData = {
       version: '1.0',
       exportedAt: Date.now(),
       clipboardItems,
       memos,
-      settings
+      settings: readStoredSettings()
     }
 
     fs.writeFileSync(result.filePath, JSON.stringify(exportData, null, 2), 'utf-8')
@@ -186,8 +181,7 @@ export async function importData(): Promise<{ success: boolean; message: string 
       }
 
       if (isValidSettings(data.settings)) {
-        const settingsPath = join(getDataDir(), 'settings.json')
-        fs.writeFileSync(settingsPath, JSON.stringify(data.settings, null, 2), 'utf-8')
+        writeStoredSettings(data.settings)
       }
     })
 

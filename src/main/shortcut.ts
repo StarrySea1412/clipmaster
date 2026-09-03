@@ -1,24 +1,15 @@
-import { globalShortcut, BrowserWindow, app } from 'electron'
-import { join } from 'path'
-import fs from 'fs'
+import { globalShortcut, BrowserWindow } from 'electron'
+import { readStoredSettings, updateStoredSettings } from './storage'
 
 const DEFAULT_SHORTCUT = 'Alt+Shift+V'
-const SETTINGS_FILE = 'settings.json'
 
 let currentShortcut: string = DEFAULT_SHORTCUT
 let currentWindow: BrowserWindow | null = null
 
-function getSettingsPath(): string {
-  return join(app.getPath('userData'), SETTINGS_FILE)
-}
-
 function loadSettings(): { shortcut: string } {
   try {
-    const filePath = getSettingsPath()
-    if (fs.existsSync(filePath)) {
-      const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-      return { shortcut: data.shortcut || DEFAULT_SHORTCUT }
-    }
+    const stored = readStoredSettings()
+    return { shortcut: typeof stored.shortcut === 'string' ? stored.shortcut : DEFAULT_SHORTCUT }
   } catch {
     // Ignore errors when reading shortcut settings
   }
@@ -27,16 +18,7 @@ function loadSettings(): { shortcut: string } {
 
 function saveSettings(settings: { shortcut: string }): void {
   try {
-    const filePath = getSettingsPath()
-    let existing: Record<string, unknown> = {}
-    try {
-      if (fs.existsSync(filePath)) {
-        existing = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-      }
-    } catch {
-      // Ignore errors when reading existing settings
-    }
-    fs.writeFileSync(filePath, JSON.stringify({ ...existing, ...settings }, null, 2), 'utf-8')
+    updateStoredSettings(settings)
   } catch (err) {
     console.error('[ClipMaster] Failed to save settings:', err)
   }

@@ -1,11 +1,12 @@
 import Database from 'better-sqlite3'
 import { app } from 'electron'
-import { join, dirname } from 'path'
+import { dirname } from 'path'
 import fs from 'fs'
 import crypto from 'crypto'
 import { classifyContent } from '../shared/classifier'
 import type { ContentCategory } from '../shared/types'
 import { initMemoTables, prepareMemoStatements, scheduleAllPendingMemos } from './memo'
+import { prepareDatabasePath } from './storage'
 
 let db: Database.Database
 let dataDir: string = ''
@@ -80,48 +81,23 @@ const SELECT_COLS = `id, content_type, content_category,
   COALESCE(LENGTH(text_content), LENGTH(image_data), 0) as size_bytes`
 
 export function initDB(): void {
-  let dbPath: string
+  const dbPath = prepareDatabasePath()
 
-  const possiblePaths = [
-    () => {
-      const p = join(process.cwd(), 'data')
-      return { dbPath: join(p, 'clipmaster.db') }
-    },
-    () => {
-      const p = app.getPath('temp')
-      return { dbPath: join(p, 'clipmaster', 'clipmaster.db') }
-    },
-    () => {
-      const p = app.getPath('userData')
-      return { dbPath: join(p, 'clipmaster.db') }
+  try {
+    const dbDir = dirname(dbPath)
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true })
     }
-  ]
 
-  let opened = false
-  for (const getPath of possiblePaths) {
-    try {
-      const result = getPath()
-      dbPath = result.dbPath
-
-      const dbDir = dirname(dbPath)
-      if (!fs.existsSync(dbDir)) {
-        fs.mkdirSync(dbDir, { recursive: true })
-      }
-
-      console.log('[ClipMaster] Trying database path:', dbPath)
-      db = new Database(dbPath)
-      dataDir = dirname(dbPath)
-      console.log('[ClipMaster] Database opened successfully at:', dbPath)
-      opened = true
-      break
-    } catch (err) {
-      console.error('[ClipMaster] Failed at path:', err)
-    }
-  }
-
-  if (!opened) {
+    console.log('[ClipMaster] Opening database at:', dbPath)
+    db = new Database(dbPath)
+    dataDir = dirname(dbPath)
+    console.log('[ClipMaster] Database opened successfully at:', dbPath)
+  } catch (err) {
+    console.error('[ClipMaster] Database open failed:', err)
     console.log('[ClipMaster] Falling back to in-memory database')
     db = new Database(':memory:')
+    dataDir = app.getPath('userData')
   }
 
   db.pragma('journal_mode = WAL')

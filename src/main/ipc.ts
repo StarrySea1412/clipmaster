@@ -38,10 +38,12 @@ import { exportData, importData } from './dataExport'
 import type { Theme } from '../shared/types'
 
 // 注册单个快捷键的辅助函数
-function registerItemShortcut(shortcut: string): void {
-  if (!shortcut || globalShortcut.isRegistered(shortcut)) return
+function registerItemShortcut(shortcut: string): boolean {
+  if (!shortcut) return false
+  if (shortcut === getShortcut()) return false
+  if (globalShortcut.isRegistered(shortcut)) return true
 
-  globalShortcut.register(shortcut, () => {
+  return globalShortcut.register(shortcut, () => {
     const currentItem = getItemByShortcut(shortcut)
     if (currentItem) {
       // 写入剪贴板
@@ -84,8 +86,7 @@ export function loadAndRegisterItemShortcuts(): void {
     const items = getItems({ limit: 1000 })
     let count = 0
     for (const item of items) {
-      if (item.shortcut) {
-        registerItemShortcut(item.shortcut)
+      if (item.shortcut && registerItemShortcut(item.shortcut)) {
         count++
       }
     }
@@ -229,14 +230,33 @@ export function registerIpcHandlers(watcher: ClipboardWatcher): void {
   ipcMain.handle('clipboard:set-item-shortcut', (_event, id: number, shortcut: string | null) => {
     try {
       const oldItem = getItemById(id)
-      if (oldItem?.shortcut) {
-        globalShortcut.unregister(oldItem.shortcut)
+      const oldShortcut = oldItem?.shortcut ?? null
+
+      if (shortcut === getShortcut()) {
+        return null
+      }
+
+      const needsNewRegistration =
+        !!shortcut && shortcut !== oldShortcut && !globalShortcut.isRegistered(shortcut)
+      const createdRegistration =
+        needsNewRegistration && !!shortcut && registerItemShortcut(shortcut)
+
+      if (needsNewRegistration && !createdRegistration) {
+        return null
       }
 
       const item = setShortcut(id, shortcut)
-      if (item && shortcut) {
-        registerItemShortcut(shortcut)
+      if (!item) {
+        if (createdRegistration && shortcut) {
+          globalShortcut.unregister(shortcut)
+        }
+        return null
       }
+
+      if (oldShortcut && oldShortcut !== shortcut && !getItemByShortcut(oldShortcut)) {
+        globalShortcut.unregister(oldShortcut)
+      }
+
       return item
     } catch (err) {
       console.error('[ClipMaster] set-item-shortcut error:', err)

@@ -1,57 +1,34 @@
 import https from 'https'
-import { app } from 'electron'
-import { join } from 'path'
-import fs from 'fs'
+import type { StoredWeatherLocation } from './storage'
+import { readStoredSettings, updateStoredSettings } from './storage'
 
-let memoryLocation: { lat: number; lon: number; name: string } | null = null
+let memoryLocation: StoredWeatherLocation | null = null
 let memoryUnit: 'celsius' | 'fahrenheit' = 'celsius'
 let loaded = false
 
-function getSettingsPath(): string {
-  const path = join(app.getPath('userData'), 'settings.json')
-  console.log('[ClipMaster] Weather settings path:', path)
-  return path
-}
-
-function readSettings(): Record<string, unknown> {
-  try {
-    const filePath = getSettingsPath()
-    if (fs.existsSync(filePath)) {
-      const content = fs.readFileSync(filePath, 'utf-8')
-      console.log('[ClipMaster] Weather settings file content:', content)
-      return JSON.parse(content)
-    } else {
-      console.log('[ClipMaster] Weather settings file does not exist')
-    }
-  } catch (err) {
-    console.error('[ClipMaster] Error reading weather settings:', err)
+function isStoredWeatherLocation(value: unknown): value is StoredWeatherLocation {
+  if (!value || typeof value !== 'object') {
+    return false
   }
-  return {}
-}
 
-function writeSettings(patch: Record<string, unknown>): void {
-  try {
-    const filePath = getSettingsPath()
-    const existing = readSettings()
-    const newSettings = { ...existing, ...patch }
-    console.log('[ClipMaster] Writing weather settings:', JSON.stringify(newSettings, null, 2))
-    fs.writeFileSync(filePath, JSON.stringify(newSettings, null, 2), 'utf-8')
-    console.log('[ClipMaster] Weather settings saved successfully')
-  } catch (err) {
-    console.error('[ClipMaster] Failed to save weather settings:', err)
-  }
+  const location = value as Record<string, unknown>
+  return (
+    typeof location.lat === 'number' &&
+    typeof location.lon === 'number' &&
+    typeof location.name === 'string'
+  )
 }
 
 function ensureLoaded(): void {
   if (loaded) return
   loaded = true
   try {
-    const settings = readSettings()
-    if (settings.weatherLocation) {
-      memoryLocation = settings.weatherLocation as { lat: number; lon: number; name: string }
+    const settings = readStoredSettings()
+    if (isStoredWeatherLocation(settings.weatherLocation)) {
+      memoryLocation = settings.weatherLocation
     }
-    if (settings.temperatureUnit) {
-      memoryUnit = settings.temperatureUnit as 'celsius' | 'fahrenheit'
+    if (settings.temperatureUnit === 'celsius' || settings.temperatureUnit === 'fahrenheit') {
+      memoryUnit = settings.temperatureUnit
     }
   } catch {
     // Ignore errors when loading weather settings
@@ -213,7 +190,7 @@ export function getSavedLocation(): { lat: number; lon: number; name: string } |
 
 export function saveLocation(lat: number, lon: number, name: string): void {
   memoryLocation = { lat, lon, name }
-  writeSettings({ weatherLocation: memoryLocation })
+  updateStoredSettings({ weatherLocation: memoryLocation })
 }
 
 export function getTemperatureUnit(): 'celsius' | 'fahrenheit' {
@@ -223,5 +200,5 @@ export function getTemperatureUnit(): 'celsius' | 'fahrenheit' {
 
 export function setTemperatureUnit(unit: 'celsius' | 'fahrenheit'): void {
   memoryUnit = unit
-  writeSettings({ temperatureUnit: unit })
+  updateStoredSettings({ temperatureUnit: unit })
 }

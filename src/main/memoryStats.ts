@@ -2,6 +2,7 @@ import { app } from 'electron'
 import { join } from 'path'
 import fs from 'fs'
 import path from 'path'
+import { getDatabasePath, getSettingsPath } from './storage'
 
 export interface MemoryUsage {
   database: number
@@ -51,14 +52,14 @@ function getFileSize(filePath: string): number {
 
 export function getMemoryUsage(): MemoryUsage {
   const userDataPath = app.getPath('userData')
-  const dbPath = join(userDataPath, 'clipmaster.db')
-  const dbWalPath = join(userDataPath, 'clipmaster.db-wal')
-  const dbShmPath = join(userDataPath, 'clipmaster.db-shm')
+  const dbPath = getDatabasePath()
+  const dbWalPath = `${dbPath}-wal`
+  const dbShmPath = `${dbPath}-shm`
   const imagesPath = join(userDataPath, 'images')
   const cachePath = join(userDataPath, 'Cache')
   const codeCachePath = join(userDataPath, 'Code Cache')
   const gpuCachePath = join(userDataPath, 'GPUCache')
-  const settingsPath = join(userDataPath, 'settings.json')
+  const settingsPath = getSettingsPath()
 
   const databaseSize = getFileSize(dbPath) + getFileSize(dbWalPath) + getFileSize(dbShmPath)
   const imagesSize = getDirectorySize(imagesPath)

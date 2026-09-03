@@ -1,7 +1,6 @@
 import { app } from 'electron'
-import { join } from 'path'
-import fs from 'fs'
 import type { Theme } from '../shared/types'
+import { readStoredSettings, updateStoredSettings } from './storage'
 
 interface AppSettings {
   theme: Theme
@@ -15,21 +14,26 @@ const DEFAULT_SETTINGS: AppSettings = {
   historyLimit: 500
 }
 
-const SETTINGS_FILE = 'app-settings.json'
-
 let currentSettings: AppSettings = { ...DEFAULT_SETTINGS }
 
-function getSettingsPath(): string {
-  return join(app.getPath('userData'), SETTINGS_FILE)
+function normalizeSettings(): AppSettings {
+  const stored = readStoredSettings()
+
+  return {
+    theme:
+      stored.theme === 'light' || stored.theme === 'dark' ? stored.theme : DEFAULT_SETTINGS.theme,
+    autoLaunch:
+      typeof stored.autoLaunch === 'boolean' ? stored.autoLaunch : DEFAULT_SETTINGS.autoLaunch,
+    historyLimit:
+      typeof stored.historyLimit === 'number'
+        ? Math.max(100, Math.min(5000, stored.historyLimit))
+        : DEFAULT_SETTINGS.historyLimit
+  }
 }
 
 export function loadAppSettings(): AppSettings {
   try {
-    const filePath = getSettingsPath()
-    if (fs.existsSync(filePath)) {
-      const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-      currentSettings = { ...DEFAULT_SETTINGS, ...data }
-    }
+    currentSettings = normalizeSettings()
   } catch (err) {
     console.error('[ClipMaster] Failed to load app settings:', err)
   }
@@ -38,8 +42,11 @@ export function loadAppSettings(): AppSettings {
 
 export function saveAppSettings(): void {
   try {
-    const filePath = getSettingsPath()
-    fs.writeFileSync(filePath, JSON.stringify(currentSettings, null, 2), 'utf-8')
+    updateStoredSettings({
+      theme: currentSettings.theme,
+      autoLaunch: currentSettings.autoLaunch,
+      historyLimit: currentSettings.historyLimit
+    })
   } catch (err) {
     console.error('[ClipMaster] Failed to save app settings:', err)
   }
