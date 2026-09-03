@@ -32,6 +32,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Use official Electron binaries (npmmirror 404s on CI)
+        shell: bash
+        run: rm -f .npmrc
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
