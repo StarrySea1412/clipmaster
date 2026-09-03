@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/clipmaster/clipmaster/actions"><img src="https://img.shields.io/github/actions/workflow/status/clipmaster/clipmaster/build.yml?style=flat-square" alt="Build Status"></a>
+  <a href="https://github.com/StarrySea1412/clipmaster/actions"><img src="https://img.shields.io/github/actions/workflow/status/clipmaster/clipmaster/build.yml?style=flat-square" alt="Build Status"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License"></a>
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/electron-39-blue?style=flat-square" alt="Electron">
@@ -67,7 +67,7 @@ Most clipboard managers are either too simple or bloated with unnecessary featur
 
 ```bash
 # Clone
-git clone https://github.com/clipmaster/clipmaster.git
+git clone https://github.com/StarrySea1412/clipmaster.git
 cd clipmaster
 
 # Install dependencies
