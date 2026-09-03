@@ -4,12 +4,12 @@ import fs from 'fs'
 
 const ROOT = path.resolve(__dirname, '..')
 const SVG_PATH = path.join(ROOT, 'resources', 'icon.svg')
-const TARGETS: { out: string; size: number }[] = [
+const TARGETS = [
   { out: path.join(ROOT, 'resources', 'icon.png'), size: 512 },
   { out: path.join(ROOT, 'build', 'icon.png'), size: 512 }
 ]
 
-async function main(): Promise<void> {
+async function main() {
   const svg = fs.readFileSync(SVG_PATH)
 
   for (const target of TARGETS) {
@@ -21,7 +21,7 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err: Error) => {
+main().catch((err) => {
   console.error('Icon generation failed:', err)
   process.exit(1)
 })
